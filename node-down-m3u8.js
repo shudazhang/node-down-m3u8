@@ -153,7 +153,7 @@ async function startDownFunc(opts = {}) {
 /**
  * 异步循环获取活跃任务的函数。
  * 该函数旨在管理任务的下载过程，包括检查所有任务是否完成、处理重试逻辑、启动新任务等。
- * @param {Object} options - 任务配置选项，包含任务列表、缓存目录、本地M3U8文件名、文件目录、文件名、成功回调、错误回调、日志记录等。
+ * @param {Object} options - 任务配置选项，包含任务列表、缓存目录、本地M3u8文件名、文件目录、文件名、成功回调、错误回调、日志记录等。
  * @param {Array} poolList - 连接池列表，用于管理请求实例和定时器。
  * @param {number} poolIndex - 当前连接池的索引。
  */
@@ -163,7 +163,7 @@ async function loopGetActiveTaskFunc(options, poolList, poolIndex) {
     let isAllFinish = options.taskList.every((item) => item.status === "finish");
     if (isAllFinish) {
       // 所有任务完成，执行合并和清理操作，并调用成功回调
-      await ffmpegMerge(path.resolve(options.cacheDir, options.localM3U8FileName), path.resolve(options.fileDir, options.fileName));
+      await ffmpegMerge(path.resolve(options.cacheDir, options.localM3u8FileName), path.resolve(options.fileDir, options.fileName));
       deleteFolderFunc(options.cacheDir);
       options.onSuccess();
       writeLogFunc("下载完成", options.isWriteLog, options.logDir, options.logFileName, options.isConsole);
@@ -217,7 +217,13 @@ async function loopGetActiveTaskFunc(options, poolList, poolIndex) {
     try {
       // 执行下载函数，更新任务状态
       await downloaderFunc(activeTask, options.headers, poolList[poolIndex], options.taskList, options.onProgress, options.timeout);
-      activeTask.status = "finish";
+      if(fs.statSync(activeTask.path).size == activeTask.fileSize){
+        activeTask.status = "finish";
+      }else{
+        activeTask.retry++;
+        activeTask.status = "init";
+        activeTask.downSize = 0;
+      }
     } catch (error) {
       // 下载出错，增加重试次数，重置状态和下载大小，以便下一次重试
       activeTask.retry++;
@@ -368,25 +374,25 @@ function uniqueByValue(array, key) {
   return result;
 }
 /**
- * 处理M3U8数据，优化URL引用。
+ * 处理M3u8数据，优化URL引用。
  *
- * 该函数接收一个新的M3U8播放列表数据字符串，通过对数据进行特定处理，返回一个修改后的M3U8数据字符串。
+ * 该函数接收一个新的M3u8播放列表数据字符串，通过对数据进行特定处理，返回一个修改后的M3u8数据字符串。
  * 主要处理包括：提取并转换URI引用，确保URI以相对路径的形式存在，便于后续处理和使用。
  *
- * @param {string} newM3U8Data - 新的M3U8数据字符串。
- * @returns {string} - 处理后的M3U8数据字符串。
+ * @param {string} newM3u8Data - 新的M3u8数据字符串。
+ * @returns {string} - 处理后的M3u8数据字符串。
  */
 function getLocalM3u8DataFunc(newM3u8Data) {
-  // 将M3U8数据字符串按行分割为数组
+  // 将M3u8数据字符串按行分割为数组
   return (
-    newM3U8Data
+    newM3u8Data
       .split("\n")
       .map((item) => {
         // 处理包含URI的行，提取URI并去除引号，如果不存在URI则使用原行
-        let tmpHref = (item.includes("URI") && item.split("URI=")[1] && item.split("URI=")[1].replaceAll('"', "")) || item;
+        let tmpHref = (item.includes("URI") && item.split("URI=")[1] && item.split("URI=")[1].replace('"', "")) || item;
         // 如果tmpHref以http开头，将其转换为相对路径
         if (tmpHref && tmpHref.startsWith("http")) {
-          item = item.replace(tmpHref, new URL(tmpHref).pathname.slice(1));
+          item = item.replace(tmpHref, new URL(tmpHref).pathname.slice(1)).replace(/%22/g, '"');
         }
         return item;
       })
@@ -409,7 +415,7 @@ function getTaskListCacheFunc(taskList) {
     // 遍历任务列表，对每个任务进行状态更新
     return taskList.map((item) => {
       // 检查文件是否存在，以及文件大小是否与预期匹配
-      if (fs.existsSync(item.path) && item.status === "finish" && fs.statSync(item.path).size === item.fileSize) {
+      if (fs.existsSync(item.path) && item.status === "finish" && fs.statSync(item.path).size == item.fileSize) {
         // 如果条件满足，保持状态为"finish"，并更新已下载大小
         item.status = "finish";
         item.downSize = item.fileSize;
@@ -426,21 +432,26 @@ function getTaskListCacheFunc(taskList) {
 }
 
 /**
- * 根据新的M3U8数据和缓存目录，获取任务列表的函数。
- * 该函数解析M3U8文件内容，筛选出其中的URI任务项，并为每个任务初始化状态。
+ * 根据新的M3u8数据和缓存目录，获取任务列表的函数。
+ * 该函数解析M3u8文件内容，筛选出其中的URI任务项，并为每个任务初始化状态。
  *
- * @param {string} newM3u8Data 新的M3U8文件数据。
+ * @param {string} newM3u8Data 新的M3u8文件数据。
  * @param {string} cacheDir 缓存目录的路径，用于存储下载的文件。
  * @returns {Array} 返回一个包含每个任务信息的对象数组，每个对象包含任务的索引、链接、状态等信息。
  */
 function getTaskListChunkFunc(newM3u8Data, cacheDir) {
-  // 将M3U8数据分割成行，并过滤掉空行和非URI行。
+  // 将M3u8数据分割成行，并过滤掉空行和非URI行。
   return newM3u8Data
     .split("\n")
     .filter((item) => item.includes("URI") || (!item.startsWith("#") && item.trim() !== ""))
     .map((item, index) => {
       // 解析URI，移除引号，并处理无法解析为URI的行。
-      let tmpHref = (item.includes("URI") && item.split("URI=")[1] && item.split("URI=")[1].replaceAll('"', "")) || item;
+      let tmpHref = (item.includes("URI") && item.split("URI=")[1] && item.split("URI=")[1].replace('"', "")) || item;
+      if(item.includes("URI=")){
+        tmpHref = /URI="(.+?)"/.exec(item)[1]
+      }else{
+        tmpHref = item
+      }
       // 返回每个任务的详细信息，包括索引、链接、初始状态等。
       return {
         index,
@@ -455,15 +466,15 @@ function getTaskListChunkFunc(newM3u8Data, cacheDir) {
 }
 
 /**
- * 根据新的M3U8链接更新旧的M3U8数据。
- * 这个函数处理旧的M3U8字符串，更新其中的URI引用，确保它们指向新的位置。
+ * 根据新的M3u8链接更新旧的M3u8数据。
+ * 这个函数处理旧的M3u8字符串，更新其中的URI引用，确保它们指向新的位置。
  *
- * @param {string} oldM3u8Data 旧的M3U8数据字符串。
- * @param {string} newM3u8Href 新的M3U8文件的URL，用于更新旧数据中的相对路径。
- * @returns {string} 返回更新后的M3U8数据字符串。
+ * @param {string} oldM3u8Data 旧的M3u8数据字符串。
+ * @param {string} newM3u8Href 新的M3u8文件的URL，用于更新旧数据中的相对路径。
+ * @returns {string} 返回更新后的M3u8数据字符串。
  */
 function getNewM3u8DataFunc(oldM3u8Data, newM3u8Href) {
-  // 将旧的M3U8数据字符串按行分割成数组
+  // 将旧的M3u8数据字符串按行分割成数组
   return (
     oldM3u8Data
       .split("\n")
@@ -506,12 +517,12 @@ function getNewM3u8DataFunc(oldM3u8Data, newM3u8Href) {
 }
 
 /**
- * 下载旧版M3U8文件的函数。
- * 该函数通过发送HTTP请求来下载指定的M3U8文件，并将其保存到本地文件系统。
+ * 下载旧版M3u8文件的函数。
+ * 该函数通过发送HTTP请求来下载指定的M3u8文件，并将其保存到本地文件系统。
  *
- * @param {string} href - M3U8文件的URL地址。
+ * @param {string} href - M3u8文件的URL地址。
  * @param {Object} headers - 请求所需的HTTP头部信息。
- * @param {string} oldM3U8FilePath - 保存M3U8文件的本地文件路径。
+ * @param {string} oldM3u8FilePath - 保存M3u8文件的本地文件路径。
  * @returns {Promise} - 表示异步下载操作的Promise对象，成功时解析为undefined，失败时拒绝并返回错误。
  */
 function downOldM3u8Func(href, headers, oldM3u8FilePath) {
