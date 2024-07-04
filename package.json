@@ -1,0 +1,30 @@
+{
+  "name": "@shudazhang/node-down-m3u8",
+  "version": "0.0.1",
+  "description": "nodejs下载m3u8文件并合并为mp4",
+  "main": "node-down-m3u8.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shudazhang/node-down-m3u8.git"
+  },
+  "keywords": [
+    "nodejs",
+    "download",
+    "file",
+    "下载",
+    "m3u8"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/shudazhang/node-down-m3u8/issues"
+  },
+  "homepage": "https://github.com/shudazhang/node-down-m3u8#readme",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}
