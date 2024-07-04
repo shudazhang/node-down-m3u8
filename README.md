@@ -27,7 +27,7 @@ nodejs下载m3u8文件并合并为mp4
         console.log("下载完成");
     })
     .catch((error) => {
-        console.log(下载失败);
+        console.log("下载失败");
     });
 
 参数说明
