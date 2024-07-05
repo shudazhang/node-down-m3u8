@@ -389,7 +389,7 @@ function getLocalM3u8DataFunc(newM3u8Data) {
       .split("\n")
       .map((item) => {
         // 处理包含URI的行，提取URI并去除引号，如果不存在URI则使用原行
-        let tmpHref = (item.includes("URI") && item.split("URI=")[1] && item.split("URI=")[1].replace('"', "")) || item;
+        let tmpHref = (item.includes("URI=") && item.split("URI=")[1] && item.split("URI=")[1].replace('"', "")) || item;
         // 如果tmpHref以http开头，将其转换为相对路径
         if (tmpHref && tmpHref.startsWith("http")) {
           item = item.replace(tmpHref, new URL(tmpHref).pathname.slice(1)).replace(/%22/g, '"');
@@ -443,10 +443,10 @@ function getTaskListChunkFunc(newM3u8Data, cacheDir) {
   // 将M3u8数据分割成行，并过滤掉空行和非URI行。
   return newM3u8Data
     .split("\n")
-    .filter((item) => item.includes("URI") || (!item.startsWith("#") && item.trim() !== ""))
+    .filter((item) => item.includes("URI=") || (!item.startsWith("#") && item.trim() !== ""))
     .map((item, index) => {
       // 解析URI，移除引号，并处理无法解析为URI的行。
-      let tmpHref = (item.includes("URI") && item.split("URI=")[1] && item.split("URI=")[1].replace('"', "")) || item;
+      let tmpHref = (item.includes("URI=") && item.split("URI=")[1] && item.split("URI=")[1].replace('"', "")) || item;
       if(item.includes("URI=")){
         tmpHref = /URI="(.+?)"/.exec(item)[1]
       }else{
@@ -481,7 +481,7 @@ function getNewM3u8DataFunc(oldM3u8Data, newM3u8Href) {
       // 对每一行进行处理，映射到新的数组中
       .map((item) => {
         // 检查行中是否包含URI关键字，用于识别媒体文件的引用
-        if (item.includes("URI")) {
+        if (item.includes("URI=")) {
           // 使用URI关键字分割字符串，以获取URI的引用部分
           let uriList = item.split('URI="');
           // 如果URI不是以http开头，说明它是相对路径
