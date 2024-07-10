@@ -60,7 +60,7 @@ async function startDownFunc(opts = {}) {
     var options = {
       href: "", // 下载文件地址
       headers: {}, // 请求头
-      timeout: 15000, // 超时时间
+      timeout: 60 * 1000, // 超时时间
       poolCount: 5, //并发下载数
       retry: 10, // 重试最大次数
       fileName: opts.fileName || path.parse(opts.href).base, // 下载文件名
@@ -217,9 +217,9 @@ async function loopGetActiveTaskFunc(options, poolList, poolIndex) {
     try {
       // 执行下载函数，更新任务状态
       await downloaderFunc(activeTask, options.headers, poolList[poolIndex], options.taskList, options.onProgress, options.timeout);
-      if(fs.statSync(activeTask.path).size == activeTask.fileSize){
+      if (fs.statSync(activeTask.path).size == activeTask.fileSize) {
         activeTask.status = "finish";
-      }else{
+      } else {
         activeTask.retry++;
         activeTask.status = "init";
         activeTask.downSize = 0;
@@ -280,6 +280,11 @@ function downloaderFunc(activeTask, headers, poolItem, taskList, onProgress, tim
           // 清除超时计时器。
           clearTimeout(poolItem.timer);
           poolItem.timer = null;
+          // 设置下载超时处理，超过指定时间后拒绝Promise。
+          poolItem.timer = setTimeout(() => {
+            poolItem.req && poolItem.req.destroy && poolItem.req.destroy();
+            reject(new Error("下载超时"));
+          }, timeout);
           // 更新当前任务的文件大小信息。
           activeTask.fileSize = res.headers["content-length"];
           activeTask.retry = 0;
@@ -447,10 +452,10 @@ function getTaskListChunkFunc(newM3u8Data, cacheDir) {
     .map((item, index) => {
       // 解析URI，移除引号，并处理无法解析为URI的行。
       let tmpHref = (item.includes("URI=") && item.split("URI=")[1] && item.split("URI=")[1].replace('"', "")) || item;
-      if(item.includes("URI=")){
-        tmpHref = /URI="(.+?)"/.exec(item)[1]
-      }else{
-        tmpHref = item
+      if (item.includes("URI=")) {
+        tmpHref = /URI="(.+?)"/.exec(item)[1];
+      } else {
+        tmpHref = item;
       }
       // 返回每个任务的详细信息，包括索引、链接、初始状态等。
       return {
