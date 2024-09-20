@@ -83,6 +83,7 @@ async function startDownFunc(opts = {}) {
       onSuccess: onSuccessFunc, // 成功回调
       onProgress: onProgressFunc, // 进度回调
       taskList: [], //  任务列表
+      ffmpegPath: "ffmpeg", // ffmpeg路径，默认是系统路径
       ...opts,
     };
 
@@ -163,7 +164,7 @@ async function loopGetActiveTaskFunc(options, poolList, poolIndex) {
     let isAllFinish = options.taskList.every((item) => item.status === "finish");
     if (isAllFinish) {
       // 所有任务完成，执行合并和清理操作，并调用成功回调
-      await ffmpegMerge(path.resolve(options.cacheDir, options.localM3u8FileName), path.resolve(options.fileDir, options.fileName));
+      await ffmpegMerge(options.ffmpegPath, path.resolve(options.cacheDir, options.localM3u8FileName), path.resolve(options.fileDir, options.fileName));
       deleteFolderFunc(options.cacheDir);
       options.onSuccess();
       writeLogFunc("下载完成", options.isWriteLog, options.logDir, options.logFileName, options.isConsole);
@@ -331,14 +332,14 @@ function downloaderFunc(activeTask, headers, poolItem, taskList, onProgress, tim
  * @param {string} outPath 输出合并后视频文件的路径。
  * @returns {Promise} 表示ffmpeg合并操作完成的Promise对象。
  */
-function ffmpegMerge(inPath, outPath) {
+function ffmpegMerge(ffmpegPath, inPath, outPath) {
   return new Promise((resolve, reject) => {
     // 检查输出文件是否已存在，如果存在，则删除它
     if (fs.existsSync(outPath)) {
       fs.unlinkSync(outPath);
     }
     // 使用ffmpeg命令行工具合并视频，指定输入输出参数
-    const ls = spawn("ffmpeg", ["-allowed_extensions", "ALL", "-i", `${inPath}`, "-c", "copy", "-threads", "4", `${outPath}`]);
+    const ls = spawn(ffmpegPath, ["-allowed_extensions", "ALL", "-i", `${inPath}`, "-c", "copy", "-threads", "4", `${outPath}`]);
     // 监听ffmpeg的标准输出，用于日志记录
     ls.stdout.on("data", (data) => {
       console.log(data.toString());

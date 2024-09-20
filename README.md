@@ -49,6 +49,7 @@ nodejs下载m3u8文件并合并为mp4
     logFileName: 日志文件的名称。默认:log.txt
     isConsole: 是否在控制台输出日志。默认:true, 可选[true,false]
     onProgress: 下载进度回调函数。返回:[{index: 序号,href:下载地址,status: 状态(init:初始化,starting:开始下载,finish:下载完成)}]
+    ffmpegPath: ffmpeg路径。默认为系统路径, 如:["D:\\software\\ffmpeg\\bin\\ffmpeg.exe"]
 
 ```
 
@@ -76,6 +77,7 @@ nodejs下载m3u8文件并合并为mp4
     --logFileName: 日志文件的名称。默认:log.txt
     --isConsole: 是否在控制台输出日志。默认:true, 可选[true,false]
     --onProgress: 下载进度回调函数。返回:[{index: 序号,href:下载地址,status: 状态(init:初始化,starting:开始下载,finish:下载完成)}]
+    --ffmpegPath ffmpeg路径。默认为系统路径, 如:["D:\\software\\ffmpeg\\bin\\ffmpeg.exe"]
 ```
 ## 功能介绍
 ```
@@ -95,9 +97,14 @@ nodejs下载m3u8文件并合并为mp4
 [√] 下载成功回调函数
 [√] 下载进度回调函数
 [√] 输出MP4文件
+[√] ffmpeg路径可配置
 ```
 
 ## 版本更新
+> v0.0.5 2024-09-20
+```
+2024-09-20 ffmpeg路径可配置
+```
 > v0.0.4 2024-07-10
 ```
 2024-07-10 超时时间修改为 60 * 1000 毫秒

@@ -1,6 +1,6 @@
 {
   "name": "@shudazhang/node-down-m3u8",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "nodejs下载m3u8文件并合并为mp4",
   "main": "node-down-m3u8.js",
   "scripts": {
